@@ -11,6 +11,13 @@ defmodule RadioCallApi.Http.RouterTest do
     :ok
   end
 
+  test "health check returns ok" do
+    conn = request(:get, "/health")
+
+    assert conn.status == 200
+    assert %{"status" => "ok"} = json(conn)
+  end
+
   test "obtains the floor" do
     conn = request(:post, "/groups/alpha/floor", %{userId: "radio-1", priority: 2})
 
@@ -85,6 +92,20 @@ defmodule RadioCallApi.Http.RouterTest do
 
     assert %{"message" => "Invalid request: count must be an integer between 1 and 100"} =
              json(conn)
+  end
+
+  test "preflight requests are accepted for browser clients" do
+    conn = request(:options, "/groups/alpha/floor")
+
+    assert conn.status == 204
+    assert conn.resp_body == ""
+    assert ["*"] = Plug.Conn.get_resp_header(conn, "access-control-allow-origin")
+
+    assert ["content-type, accept"] =
+             Plug.Conn.get_resp_header(conn, "access-control-allow-headers")
+
+    assert ["GET, POST, DELETE, OPTIONS"] =
+             Plug.Conn.get_resp_header(conn, "access-control-allow-methods")
   end
 
   test "invalid request payload returns bad request" do
