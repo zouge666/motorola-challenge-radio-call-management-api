@@ -23,6 +23,9 @@ jobs:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
 
+      - name: Install dependencies
+        run: mix deps.get
+
       - name: Check formatting
         run: mix format --check-formatted
 

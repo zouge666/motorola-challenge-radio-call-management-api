@@ -19,6 +19,10 @@ defmodule RadioCallApi.MixProject do
   end
 
   defp deps do
-    []
+    [
+      {:plug, "~> 1.15"},
+      {:bandit, "~> 1.5"},
+      {:jason, "~> 1.4"}
+    ]
   end
 end
