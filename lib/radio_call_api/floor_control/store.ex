@@ -11,6 +11,14 @@ defmodule RadioCallApi.FloorControl.Store do
           priority: priority(),
           expires_at: DateTime.t()
         }
+  @type event :: %{
+          action: String.t(),
+          group_id: group_id(),
+          user_id: user_id(),
+          priority: priority(),
+          reason: String.t(),
+          occurred_at: DateTime.t()
+        }
 
   @callback claim(group_id(), user_id(), priority(), non_neg_integer()) ::
               {:ok, :granted | :renewed | {:preempted, holder()}}
@@ -20,4 +28,6 @@ defmodule RadioCallApi.FloorControl.Store do
               :ok | {:error, :not_holder}
 
   @callback current_holder(group_id()) :: {:ok, holder() | nil}
+
+  @callback recent_events(pos_integer()) :: {:ok, list(event())}
 end

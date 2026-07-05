@@ -5,6 +5,10 @@ defmodule RadioCallApi.Config do
 
   @app :radio_call_api
 
+  def audit_limit do
+    Application.fetch_env!(@app, :audit_limit)
+  end
+
   def floor_lease_ms do
     Application.fetch_env!(@app, :floor_lease_ms)
   end

@@ -5,12 +5,13 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
 
   use GenServer
 
+  alias RadioCallApi.Config
   alias RadioCallApi.FloorControl.Store
 
   @behaviour Store
 
   def start_link(_opts) do
-    GenServer.start_link(__MODULE__, %{floors: %{}}, name: __MODULE__)
+    GenServer.start_link(__MODULE__, %{floors: %{}, events: []}, name: __MODULE__)
   end
 
   @impl Store
@@ -26,6 +27,11 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
   @impl Store
   def current_holder(group_id) do
     GenServer.call(__MODULE__, {:current_holder, group_id})
+  end
+
+  @impl Store
+  def recent_events(count) do
+    GenServer.call(__MODULE__, {:recent_events, count})
   end
 
   def reset! do
@@ -44,21 +50,37 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
     case Map.get(state.floors, group_id) do
       nil ->
         floor = new_floor(user_id, priority, expires_at, make_ref())
-        state = put_floor(state, group_id, floor, lease_ms)
+
+        state =
+          state
+          |> put_floor(group_id, floor, lease_ms)
+          |> remember("obtain", group_id, floor, "granted", now)
+
         {:reply, {:ok, :granted}, state}
 
       %{user_id: ^user_id} = current_floor ->
         Process.cancel_timer(current_floor.timer_ref)
 
         floor = new_floor(user_id, priority, expires_at, make_ref())
-        state = put_floor(state, group_id, floor, lease_ms)
+
+        state =
+          state
+          |> put_floor(group_id, floor, lease_ms)
+          |> remember("obtain", group_id, floor, "renewed", now)
+
         {:reply, {:ok, :renewed}, state}
 
       %{priority: holder_priority} = holder when priority > holder_priority ->
         Process.cancel_timer(holder.timer_ref)
 
         floor = new_floor(user_id, priority, expires_at, make_ref())
-        state = put_floor(state, group_id, floor, lease_ms)
+
+        state =
+          state
+          |> remember("release", group_id, holder, "preempted", now)
+          |> put_floor(group_id, floor, lease_ms)
+          |> remember("obtain", group_id, floor, "preempted", now)
+
         {:reply, {:ok, {:preempted, public_holder(holder)}}, state}
 
       holder ->
@@ -74,7 +96,11 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
       %{user_id: ^user_id} = floor ->
         Process.cancel_timer(floor.timer_ref)
 
-        state = update_in(state.floors, &Map.delete(&1, group_id))
+        state =
+          state
+          |> delete_floor(group_id)
+          |> remember("release", group_id, floor, "manual", DateTime.utc_now())
+
         {:reply, :ok, state}
 
       _ ->
@@ -91,19 +117,28 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
   end
 
   @impl true
+  def handle_call({:recent_events, count}, _from, state) do
+    {:reply, {:ok, Enum.take(state.events, count)}, state}
+  end
+
+  @impl true
   def handle_call(:reset, _from, state) do
     Enum.each(state.floors, fn {_group_id, floor} ->
       Process.cancel_timer(floor.timer_ref)
     end)
 
-    {:reply, :ok, %{floors: %{}}}
+    {:reply, :ok, %{floors: %{}, events: []}}
   end
 
   @impl true
   def handle_info({:lease_expired, group_id, token}, state) do
     case Map.get(state.floors, group_id) do
-      %{timer_token: ^token} ->
-        state = update_in(state.floors, &Map.delete(&1, group_id))
+      %{timer_token: ^token} = floor ->
+        state =
+          state
+          |> delete_floor(group_id)
+          |> remember("release", group_id, floor, "timeout", DateTime.utc_now())
+
         {:noreply, state}
 
       _ ->
@@ -120,12 +155,19 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
     put_in(state, [:floors, group_id], floor)
   end
 
+  defp delete_floor(state, group_id) do
+    update_in(state.floors, &Map.delete(&1, group_id))
+  end
+
   defp release_if_expired(state, group_id) do
     case Map.get(state.floors, group_id) do
       %{expires_at: expires_at} = floor ->
         if DateTime.compare(expires_at, DateTime.utc_now()) == :lt do
           Process.cancel_timer(floor.timer_ref)
-          update_in(state.floors, &Map.delete(&1, group_id))
+
+          state
+          |> delete_floor(group_id)
+          |> remember("release", group_id, floor, "timeout", DateTime.utc_now())
         else
           state
         end
@@ -133,6 +175,21 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
       nil ->
         state
     end
+  end
+
+  defp remember(state, action, group_id, floor, reason, occurred_at) do
+    event = %{
+      action: action,
+      group_id: group_id,
+      user_id: floor.user_id,
+      priority: floor.priority,
+      reason: reason,
+      occurred_at: occurred_at
+    }
+
+    Map.update!(state, :events, fn events ->
+      Enum.take([event | events], Config.audit_limit())
+    end)
   end
 
   defp new_floor(user_id, priority, expires_at, token) do
