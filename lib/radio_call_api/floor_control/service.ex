@@ -34,7 +34,24 @@ defmodule RadioCallApi.FloorControl.Service do
     end
   end
 
+  def audit(count) do
+    {:ok, events} = store().recent_events(count)
+
+    {200, Enum.map(events, &format_event/1)}
+  end
+
   defp store do
     MemoryStore
+  end
+
+  defp format_event(event) do
+    %{
+      "action" => event.action,
+      "groupId" => event.group_id,
+      "userId" => event.user_id,
+      "priority" => event.priority,
+      "reason" => event.reason,
+      "timestamp" => DateTime.to_iso8601(event.occurred_at)
+    }
   end
 end

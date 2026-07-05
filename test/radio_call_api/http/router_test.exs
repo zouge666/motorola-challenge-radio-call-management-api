@@ -59,6 +59,34 @@ defmodule RadioCallApi.Http.RouterTest do
     assert %{"message" => "Floor released by radio-1 for group alpha"} = json(conn)
   end
 
+  test "audit endpoint validates count and returns events" do
+    request(:post, "/groups/alpha/floor", %{userId: "radio-1", priority: 1})
+
+    conn = request(:get, "/audit/floor?count=1")
+
+    assert conn.status == 200
+
+    assert [
+             %{
+               "action" => "obtain",
+               "groupId" => "alpha",
+               "priority" => 1,
+               "reason" => "granted",
+               "timestamp" => timestamp,
+               "userId" => "radio-1"
+             }
+           ] = json(conn)
+
+    assert is_binary(timestamp)
+
+    conn = request(:get, "/audit/floor?count=0")
+
+    assert conn.status == 400
+
+    assert %{"message" => "Invalid request: count must be an integer between 1 and 100"} =
+             json(conn)
+  end
+
   test "invalid request payload returns bad request" do
     conn = request(:post, "/groups/alpha/floor", %{})
 

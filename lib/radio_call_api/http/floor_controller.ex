@@ -31,4 +31,14 @@ defmodule RadioCallApi.Http.FloorController do
 
     Response.json(conn, Service.holder(group_id))
   end
+
+  def audit(conn) do
+    case RequestParser.parse_audit_count(conn.query_params) do
+      {:ok, count} ->
+        Response.json(conn, Service.audit(count))
+
+      {:error, message} ->
+        Response.json(conn, 400, message)
+    end
+  end
 end

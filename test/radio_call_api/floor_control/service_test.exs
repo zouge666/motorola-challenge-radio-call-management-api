@@ -56,4 +56,17 @@ defmodule RadioCallApi.FloorControl.ServiceTest do
     assert {200, "Floor obtained by user-2 for group group-1"} =
              Service.obtain("group-1", "user-2", 1)
   end
+
+  test "returns recent audit events" do
+    Service.obtain("group-1", "user-1", 1)
+    Service.release("group-1", "user-1")
+
+    assert {200, [latest | _events]} = Service.audit(10)
+    assert latest["action"] == "release"
+    assert latest["groupId"] == "group-1"
+    assert latest["userId"] == "user-1"
+    assert latest["priority"] == 1
+    assert latest["reason"] == "manual"
+    assert is_binary(latest["timestamp"])
+  end
 end

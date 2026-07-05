@@ -10,6 +10,7 @@ defmodule RadioCallApi.Http.Router do
 
   plug(:match)
   plug(Plug.Parsers, parsers: [:json], pass: ["*/*"], json_decoder: Jason)
+  plug(:fetch_query_params)
   plug(:dispatch)
 
   post "/groups/:group_id/floor" do
@@ -22,6 +23,10 @@ defmodule RadioCallApi.Http.Router do
 
   delete "/groups/:group_id/floor/:user_id" do
     FloorController.release(conn)
+  end
+
+  get "/audit/floor" do
+    FloorController.audit(conn)
   end
 
   match _ do

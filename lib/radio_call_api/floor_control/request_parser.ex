@@ -15,6 +15,12 @@ defmodule RadioCallApi.FloorControl.RequestParser do
     end
   end
 
+  def parse_audit_count(params) do
+    params
+    |> Map.get("count", "10")
+    |> parse_count()
+  end
+
   defp required_string(params, key) do
     case Map.get(params, key) do
       value when is_binary(value) and value != "" -> {:ok, value}
@@ -27,5 +33,21 @@ defmodule RadioCallApi.FloorControl.RequestParser do
       value when is_integer(value) -> {:ok, value}
       _ -> {:error, :invalid_priority}
     end
+  end
+
+  defp parse_count(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {count, ""} when count >= 1 and count <= 100 ->
+        {:ok, count}
+
+      _ ->
+        invalid_count()
+    end
+  end
+
+  defp parse_count(_value), do: invalid_count()
+
+  defp invalid_count do
+    {:error, "Invalid request: count must be an integer between 1 and 100"}
   end
 end
