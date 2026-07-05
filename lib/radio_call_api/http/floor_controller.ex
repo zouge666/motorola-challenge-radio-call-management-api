@@ -25,4 +25,10 @@ defmodule RadioCallApi.Http.FloorController do
 
     Response.json(conn, Service.release(group_id, user_id))
   end
+
+  def holder(conn) do
+    group_id = conn.path_params["group_id"]
+
+    Response.json(conn, Service.holder(group_id))
+  end
 end

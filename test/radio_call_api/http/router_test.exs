@@ -27,6 +27,22 @@ defmodule RadioCallApi.Http.RouterTest do
     assert %{"message" => "Floor is currently held by radio-1 for group alpha"} = json(conn)
   end
 
+  test "returns the current floor holder" do
+    request(:post, "/groups/alpha/floor", %{userId: "radio-1"})
+
+    conn = request(:get, "/groups/alpha/floor")
+
+    assert conn.status == 200
+    assert %{"userId" => "radio-1"} = json(conn)
+  end
+
+  test "returns no content when the group has no holder" do
+    conn = request(:get, "/groups/alpha/floor")
+
+    assert conn.status == 204
+    assert conn.resp_body == ""
+  end
+
   test "releases the floor" do
     request(:post, "/groups/alpha/floor", %{userId: "radio-1"})
 

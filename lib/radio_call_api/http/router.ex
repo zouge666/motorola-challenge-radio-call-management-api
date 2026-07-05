@@ -16,6 +16,10 @@ defmodule RadioCallApi.Http.Router do
     FloorController.obtain(conn)
   end
 
+  get "/groups/:group_id/floor" do
+    FloorController.holder(conn)
+  end
+
   delete "/groups/:group_id/floor/:user_id" do
     FloorController.release(conn)
   end

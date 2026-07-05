@@ -23,6 +23,11 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
     GenServer.call(__MODULE__, {:release, group_id, user_id})
   end
 
+  @impl Store
+  def current_holder(group_id) do
+    GenServer.call(__MODULE__, {:current_holder, group_id})
+  end
+
   def reset! do
     GenServer.call(__MODULE__, :reset)
   end
@@ -68,6 +73,14 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
       _ ->
         {:reply, {:error, :not_holder}, state}
     end
+  end
+
+  @impl true
+  def handle_call({:current_holder, group_id}, _from, state) do
+    state = release_if_expired(state, group_id)
+    holder = state.floors |> Map.get(group_id) |> public_holder()
+
+    {:reply, {:ok, holder}, state}
   end
 
   @impl true
@@ -123,4 +136,7 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
       timer_ref: nil
     }
   end
+
+  defp public_holder(nil), do: nil
+  defp public_holder(floor), do: Map.take(floor, [:user_id, :expires_at])
 end

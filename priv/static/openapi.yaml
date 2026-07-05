@@ -54,6 +54,31 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
                 message: Floor is currently held by radio-1 for group group-alpha
+    get:
+      summary: Get the current floor holder
+      description: Returns the current user holding the floor for a radio group.
+      operationId: getCurrentFloorHolder
+      tags:
+        - Floor Control
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: Radio group identifier.
+          schema:
+            type: string
+            example: group-alpha
+      responses:
+        "200":
+          description: Current floor holder.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HolderResponse"
+              example:
+                userId: radio-1
+        "204":
+          description: No user currently holds the floor.
   /groups/{groupId}/floor/{userId}:
     delete:
       summary: Release the floor
@@ -103,6 +128,15 @@ components:
         userId:
           type: string
           description: User requesting the floor.
+          example: radio-1
+    HolderResponse:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          description: Current floor holder.
           example: radio-1
     MessageResponse:
       type: object

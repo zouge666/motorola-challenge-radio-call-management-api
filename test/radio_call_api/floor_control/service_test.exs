@@ -12,6 +12,8 @@ defmodule RadioCallApi.FloorControl.ServiceTest do
   test "obtains an available floor" do
     assert {200, "Floor obtained by user-1 for group group-1"} =
              Service.obtain("group-1", "user-1", 0)
+
+    assert {200, %{"userId" => "user-1"}} = Service.holder("group-1")
   end
 
   test "rejects a request from another user" do
@@ -26,6 +28,8 @@ defmodule RadioCallApi.FloorControl.ServiceTest do
 
     assert {200, "Floor released by user-1 for group group-1"} =
              Service.release("group-1", "user-1")
+
+    assert {204, nil} = Service.holder("group-1")
   end
 
   test "rejects release by a non-holder" do

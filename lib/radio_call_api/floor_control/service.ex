@@ -26,6 +26,13 @@ defmodule RadioCallApi.FloorControl.Service do
     end
   end
 
+  def holder(group_id) do
+    case store().current_holder(group_id) do
+      {:ok, nil} -> {204, nil}
+      {:ok, holder} -> {200, %{"userId" => holder.user_id}}
+    end
+  end
+
   defp store do
     MemoryStore
   end
