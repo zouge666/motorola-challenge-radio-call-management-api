@@ -10,7 +10,7 @@ paths:
   /groups/{groupId}/floor:
     post:
       summary: Obtain the floor
-      description: Allows a user to obtain the floor for a radio group.
+      description: Allows a user to obtain the floor for a radio group. A higher-priority request can take over the floor from the current holder.
       operationId: obtainFloor
       tags:
         - Floor Control
@@ -47,13 +47,13 @@ paths:
               example:
                 message: "Invalid request: priority must be an integer"
         "409":
-          description: Floor is already held by another user.
+          description: Floor is held by another user with equal or higher priority.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: Floor is currently held by radio-1 for group group-alpha
+                message: Floor is currently held by radio-1 for group group-alpha with priority 5
     get:
       summary: Get the current floor holder
       description: Returns the current user holding the floor for a radio group.
@@ -77,6 +77,7 @@ paths:
                 $ref: "#/components/schemas/HolderResponse"
               example:
                 userId: radio-1
+                priority: 5
         "204":
           description: No user currently holds the floor.
   /groups/{groupId}/floor/{userId}:
@@ -131,18 +132,23 @@ components:
           example: radio-1
         priority:
           type: integer
-          description: Request priority. Higher values will be used by later takeover rules.
+          description: Request priority. Higher values can take over the floor from lower-priority holders.
           default: 0
           example: 3
     HolderResponse:
       type: object
       required:
         - userId
+        - priority
       properties:
         userId:
           type: string
           description: Current floor holder.
           example: radio-1
+        priority:
+          type: integer
+          description: Current holder priority.
+          example: 5
     MessageResponse:
       type: object
       required:

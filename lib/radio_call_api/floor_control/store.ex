@@ -8,12 +8,13 @@ defmodule RadioCallApi.FloorControl.Store do
   @type priority :: integer()
   @type holder :: %{
           user_id: user_id(),
+          priority: priority(),
           expires_at: DateTime.t()
         }
 
   @callback claim(group_id(), user_id(), priority(), non_neg_integer()) ::
-              {:ok, :granted | :renewed}
-              | {:error, {:occupied, user_id()}}
+              {:ok, :granted | :renewed | {:preempted, holder()}}
+              | {:error, {:occupied, holder()}}
 
   @callback release(group_id(), user_id()) ::
               :ok | {:error, :not_holder}

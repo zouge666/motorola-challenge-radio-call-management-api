@@ -11,20 +11,29 @@ defmodule RadioCallApi.FloorControl.ServiceTest do
 
   test "obtains an available floor" do
     assert {200, "Floor obtained by user-1 for group group-1"} =
-             Service.obtain("group-1", "user-1", 0)
+             Service.obtain("group-1", "user-1", 1)
 
-    assert {200, %{"userId" => "user-1"}} = Service.holder("group-1")
+    assert {200, %{"userId" => "user-1", "priority" => 1}} = Service.holder("group-1")
   end
 
-  test "rejects a request from another user" do
-    Service.obtain("group-1", "user-1", 0)
+  test "rejects a lower priority request from another user" do
+    Service.obtain("group-1", "user-1", 5)
 
-    assert {409, "Floor is currently held by user-1 for group group-1"} =
-             Service.obtain("group-1", "user-2", 0)
+    assert {409, "Floor is currently held by user-1 for group group-1 with priority 5"} =
+             Service.obtain("group-1", "user-2", 3)
+  end
+
+  test "allows higher priority takeover" do
+    Service.obtain("group-1", "user-1", 2)
+
+    assert {200, "Floor obtained by user-2 for group group-1"} =
+             Service.obtain("group-1", "user-2", 7)
+
+    assert {200, %{"userId" => "user-2", "priority" => 7}} = Service.holder("group-1")
   end
 
   test "allows the holder to release the floor" do
-    Service.obtain("group-1", "user-1", 0)
+    Service.obtain("group-1", "user-1", 1)
 
     assert {200, "Floor released by user-1 for group group-1"} =
              Service.release("group-1", "user-1")
@@ -33,18 +42,18 @@ defmodule RadioCallApi.FloorControl.ServiceTest do
   end
 
   test "rejects release by a non-holder" do
-    Service.obtain("group-1", "user-1", 0)
+    Service.obtain("group-1", "user-1", 1)
 
     assert {403, "User user-2 does not hold the floor for group group-1"} =
              Service.release("group-1", "user-2")
   end
 
   test "automatically releases the floor after the lease expires" do
-    Service.obtain("group-1", "user-1", 0)
+    Service.obtain("group-1", "user-1", 1)
 
     Process.sleep(250)
 
     assert {200, "Floor obtained by user-2 for group group-1"} =
-             Service.obtain("group-1", "user-2", 0)
+             Service.obtain("group-1", "user-2", 1)
   end
 end

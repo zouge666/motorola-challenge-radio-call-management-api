@@ -12,7 +12,8 @@ defmodule RadioCallApi.FloorControl.Service do
         {200, "Floor obtained by #{user_id} for group #{group_id}"}
 
       {:error, {:occupied, holder}} ->
-        {409, "Floor is currently held by #{holder} for group #{group_id}"}
+        {409,
+         "Floor is currently held by #{holder.user_id} for group #{group_id} with priority #{holder.priority}"}
     end
   end
 
@@ -29,7 +30,7 @@ defmodule RadioCallApi.FloorControl.Service do
   def holder(group_id) do
     case store().current_holder(group_id) do
       {:ok, nil} -> {204, nil}
-      {:ok, holder} -> {200, %{"userId" => holder.user_id}}
+      {:ok, holder} -> {200, %{"userId" => holder.user_id, "priority" => holder.priority}}
     end
   end
 

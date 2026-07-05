@@ -14,8 +14,8 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
   end
 
   @impl Store
-  def claim(group_id, user_id, _priority, lease_ms) do
-    GenServer.call(__MODULE__, {:claim, group_id, user_id, lease_ms})
+  def claim(group_id, user_id, priority, lease_ms) do
+    GenServer.call(__MODULE__, {:claim, group_id, user_id, priority, lease_ms})
   end
 
   @impl Store
@@ -36,26 +36,33 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
   def init(state), do: {:ok, state}
 
   @impl true
-  def handle_call({:claim, group_id, user_id, lease_ms}, _from, state) do
+  def handle_call({:claim, group_id, user_id, priority, lease_ms}, _from, state) do
     state = release_if_expired(state, group_id)
     now = DateTime.utc_now()
     expires_at = DateTime.add(now, lease_ms, :millisecond)
 
     case Map.get(state.floors, group_id) do
       nil ->
-        floor = new_floor(user_id, expires_at, make_ref())
+        floor = new_floor(user_id, priority, expires_at, make_ref())
         state = put_floor(state, group_id, floor, lease_ms)
         {:reply, {:ok, :granted}, state}
 
       %{user_id: ^user_id} = current_floor ->
         Process.cancel_timer(current_floor.timer_ref)
 
-        floor = new_floor(user_id, expires_at, make_ref())
+        floor = new_floor(user_id, priority, expires_at, make_ref())
         state = put_floor(state, group_id, floor, lease_ms)
         {:reply, {:ok, :renewed}, state}
 
+      %{priority: holder_priority} = holder when priority > holder_priority ->
+        Process.cancel_timer(holder.timer_ref)
+
+        floor = new_floor(user_id, priority, expires_at, make_ref())
+        state = put_floor(state, group_id, floor, lease_ms)
+        {:reply, {:ok, {:preempted, public_holder(holder)}}, state}
+
       holder ->
-        {:reply, {:error, {:occupied, holder.user_id}}, state}
+        {:reply, {:error, {:occupied, public_holder(holder)}}, state}
     end
   end
 
@@ -128,9 +135,10 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
     end
   end
 
-  defp new_floor(user_id, expires_at, token) do
+  defp new_floor(user_id, priority, expires_at, token) do
     %{
       user_id: user_id,
+      priority: priority,
       expires_at: expires_at,
       timer_token: token,
       timer_ref: nil
@@ -138,5 +146,5 @@ defmodule RadioCallApi.FloorControl.MemoryStore do
   end
 
   defp public_holder(nil), do: nil
-  defp public_holder(floor), do: Map.take(floor, [:user_id, :expires_at])
+  defp public_holder(floor), do: Map.take(floor, [:user_id, :priority, :expires_at])
 end

@@ -12,28 +12,35 @@ defmodule RadioCallApi.Http.RouterTest do
   end
 
   test "obtains the floor" do
-    conn = request(:post, "/groups/alpha/floor", %{userId: "radio-1"})
+    conn = request(:post, "/groups/alpha/floor", %{userId: "radio-1", priority: 2})
 
     assert conn.status == 200
     assert %{"message" => "Floor obtained by radio-1 for group alpha"} = json(conn)
   end
 
-  test "returns conflict when another user holds the floor" do
-    request(:post, "/groups/alpha/floor", %{userId: "radio-1"})
+  test "handles priority conflict and takeover" do
+    request(:post, "/groups/alpha/floor", %{userId: "radio-1", priority: 5})
 
-    conn = request(:post, "/groups/alpha/floor", %{userId: "radio-2"})
+    conn = request(:post, "/groups/alpha/floor", %{userId: "radio-2", priority: 3})
 
     assert conn.status == 409
-    assert %{"message" => "Floor is currently held by radio-1 for group alpha"} = json(conn)
+
+    assert %{"message" => "Floor is currently held by radio-1 for group alpha with priority 5"} =
+             json(conn)
+
+    conn = request(:post, "/groups/alpha/floor", %{userId: "radio-3", priority: 7})
+
+    assert conn.status == 200
+    assert %{"message" => "Floor obtained by radio-3 for group alpha"} = json(conn)
   end
 
   test "returns the current floor holder" do
-    request(:post, "/groups/alpha/floor", %{userId: "radio-1"})
+    request(:post, "/groups/alpha/floor", %{userId: "radio-1", priority: 4})
 
     conn = request(:get, "/groups/alpha/floor")
 
     assert conn.status == 200
-    assert %{"userId" => "radio-1"} = json(conn)
+    assert %{"userId" => "radio-1", "priority" => 4} = json(conn)
   end
 
   test "returns no content when the group has no holder" do
