@@ -45,7 +45,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
               example:
-                message: "Invalid request: userId is required"
+                message: "Invalid request: priority must be an integer"
         "409":
           description: Floor is already held by another user.
           content:
@@ -129,6 +129,11 @@ components:
           type: string
           description: User requesting the floor.
           example: radio-1
+        priority:
+          type: integer
+          description: Request priority. Higher values will be used by later takeover rules.
+          default: 0
+          example: 3
     HolderResponse:
       type: object
       required:

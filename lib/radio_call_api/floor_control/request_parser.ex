@@ -3,10 +3,15 @@ defmodule RadioCallApi.FloorControl.RequestParser do
   Validates and normalizes incoming floor-control request bodies.
   """
 
+  @default_priority 0
+
   def parse_claim(%{} = params) do
-    case required_string(params, "userId") do
-      {:ok, user_id} -> {:ok, %{user_id: user_id, priority: 0}}
+    with {:ok, user_id} <- required_string(params, "userId"),
+         {:ok, priority} <- optional_integer(params, "priority", @default_priority) do
+      {:ok, %{user_id: user_id, priority: priority}}
+    else
       {:error, :missing_user_id} -> {:error, "Invalid request: userId is required"}
+      {:error, :invalid_priority} -> {:error, "Invalid request: priority must be an integer"}
     end
   end
 
@@ -14,6 +19,13 @@ defmodule RadioCallApi.FloorControl.RequestParser do
     case Map.get(params, key) do
       value when is_binary(value) and value != "" -> {:ok, value}
       _ -> {:error, :missing_user_id}
+    end
+  end
+
+  defp optional_integer(params, key, default) do
+    case Map.get(params, key, default) do
+      value when is_integer(value) -> {:ok, value}
+      _ -> {:error, :invalid_priority}
     end
   end
 end
