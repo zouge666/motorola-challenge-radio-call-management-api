@@ -9,10 +9,23 @@ defmodule RadioCallApi.Http.Router do
   alias RadioCallApi.Http.Response
 
   plug(:put_cors_headers)
+
+  plug(Plug.Static,
+    at: "/",
+    from: :radio_call_api,
+    only: ["docs.html", "openapi.yaml"]
+  )
+
   plug(:match)
   plug(Plug.Parsers, parsers: [:json], pass: ["*/*"], json_decoder: Jason)
   plug(:fetch_query_params)
   plug(:dispatch)
+
+  get "/docs" do
+    conn
+    |> Plug.Conn.put_resp_header("location", "/docs.html")
+    |> Plug.Conn.send_resp(302, "")
+  end
 
   get "/health" do
     Response.json(conn, 200, %{"status" => "ok"})

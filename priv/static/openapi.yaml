@@ -1,136 +1,113 @@
 openapi: 3.0.0
 info:
-  title: Floor Control API
-  description: API for managing floor ownership in a push-to-talk radio group system.
+  title: Radio Group Call Management API
+  description: >
+    REST API for managing floor control in a push-to-talk radio group system.
+    The service supports time-limited floor ownership, priority-based takeover,
+    current holder lookup, and audit history.
   version: 1.0.0
 servers:
   - url: http://localhost:8080
     description: Local development server
 paths:
+  /health:
+    get:
+      summary: Health check
+      tags:
+        - Operations
+      responses:
+        "200":
+          description: Service is running.
   /groups/{groupId}/floor:
     post:
       summary: Obtain the floor
-      description: Allows a user to obtain the floor for a radio group. A higher-priority request can take over the floor from the current holder.
+      description: >
+        Grants the floor to a user when it is free, when the same user renews
+        it, or when the request priority is higher than the current holder's
+        priority.
       operationId: obtainFloor
       tags:
         - Floor Control
       parameters:
-        - name: groupId
-          in: path
-          required: true
-          description: Radio group identifier.
-          schema:
-            type: string
-            example: group-alpha
+        - $ref: "#/components/parameters/GroupId"
       requestBody:
         required: true
-        description: User requesting the floor.
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserRequest"
+              $ref: "#/components/schemas/ObtainFloorRequest"
       responses:
         "200":
-          description: Floor obtained.
+          description: Floor was obtained.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: Floor obtained by radio-1 for group group-alpha
         "400":
-          description: Missing or invalid request payload.
+          description: Invalid request payload.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                message: "Invalid request: priority must be an integer"
+                $ref: "#/components/schemas/MessageResponse"
         "409":
           description: Floor is held by another user with equal or higher priority.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                message: Floor is currently held by radio-1 for group group-alpha with priority 5
+                $ref: "#/components/schemas/MessageResponse"
     get:
-      summary: Get the current floor holder
-      description: Returns the current user holding the floor for a radio group.
-      operationId: getCurrentFloorHolder
+      summary: Retrieve the current floor holder
+      operationId: retrieveFloorHolder
       tags:
         - Floor Control
       parameters:
-        - name: groupId
-          in: path
-          required: true
-          description: Radio group identifier.
-          schema:
-            type: string
-            example: group-alpha
+        - $ref: "#/components/parameters/GroupId"
       responses:
         "200":
-          description: Current floor holder.
+          description: Floor holder was found.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HolderResponse"
-              example:
-                userId: radio-1
-                priority: 5
+                $ref: "#/components/schemas/FloorHolder"
         "204":
           description: No user currently holds the floor.
   /groups/{groupId}/floor/{userId}:
     delete:
       summary: Release the floor
-      description: Allows the current holder to release the floor for a radio group.
       operationId: releaseFloor
       tags:
         - Floor Control
       parameters:
-        - name: groupId
-          in: path
-          required: true
-          description: Radio group identifier.
-          schema:
-            type: string
-            example: group-alpha
+        - $ref: "#/components/parameters/GroupId"
         - name: userId
           in: path
           required: true
-          description: User releasing the floor.
           schema:
             type: string
-            example: radio-1
+          example: user-456
       responses:
         "200":
-          description: Floor released.
+          description: Floor was released.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: Floor released by radio-1 for group group-alpha
         "403":
-          description: User does not hold the floor.
+          description: The user does not hold the floor.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                message: User radio-2 does not hold the floor for group group-alpha
+                $ref: "#/components/schemas/MessageResponse"
   /audit/floor:
     get:
       summary: Retrieve floor audit history
-      description: Returns the most recent floor obtain and release events.
-      operationId: getFloorAudit
+      operationId: retrieveFloorAudit
       tags:
         - Floor Control
       parameters:
         - name: count
           in: query
           required: false
-          description: Number of recent events to return.
           schema:
             type: integer
             minimum: 1
@@ -150,64 +127,53 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-              example:
-                message: "Invalid request: count must be an integer between 1 and 100"
+                $ref: "#/components/schemas/MessageResponse"
 components:
+  parameters:
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: group-alpha-123
   schemas:
-    UserRequest:
+    ObtainFloorRequest:
       type: object
       required:
         - userId
       properties:
         userId:
           type: string
-          description: User requesting the floor.
-          example: radio-1
+          example: user-456
         priority:
           type: integer
-          description: Request priority. Higher values can take over the floor from lower-priority holders.
           default: 0
-          example: 3
-    HolderResponse:
+          description: Higher numbers can preempt lower-priority holders.
+          example: 5
+    FloorHolder:
       type: object
-      required:
-        - userId
-        - priority
       properties:
         userId:
           type: string
-          description: Current floor holder.
-          example: radio-1
+          example: user-456
         priority:
           type: integer
-          description: Current holder priority.
           example: 5
     AuditEvent:
       type: object
-      required:
-        - action
-        - groupId
-        - userId
-        - priority
-        - reason
-        - timestamp
       properties:
         action:
           type: string
           enum:
             - obtain
             - release
-          example: obtain
         groupId:
           type: string
-          example: group-alpha
         userId:
           type: string
-          example: radio-1
         priority:
           type: integer
-          example: 3
         reason:
           type: string
           enum:
@@ -216,21 +182,11 @@ components:
             - preempted
             - manual
             - timeout
-          example: granted
         timestamp:
           type: string
           format: date-time
     MessageResponse:
       type: object
-      required:
-        - message
-      properties:
-        message:
-          type: string
-    ErrorResponse:
-      type: object
-      required:
-        - message
       properties:
         message:
           type: string

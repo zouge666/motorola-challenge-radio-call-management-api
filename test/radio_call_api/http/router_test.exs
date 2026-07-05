@@ -108,6 +108,29 @@ defmodule RadioCallApi.Http.RouterTest do
              Plug.Conn.get_resp_header(conn, "access-control-allow-methods")
   end
 
+  test "docs page serves Swagger UI" do
+    conn = request(:get, "/docs.html")
+
+    assert conn.status == 200
+    assert conn.resp_body =~ "SwaggerUIBundle"
+    assert conn.resp_body =~ "/openapi.yaml"
+  end
+
+  test "docs route redirects to the static docs page" do
+    conn = request(:get, "/docs")
+
+    assert conn.status == 302
+    assert ["/docs.html"] = Plug.Conn.get_resp_header(conn, "location")
+  end
+
+  test "openapi spec is served for Swagger UI" do
+    conn = request(:get, "/openapi.yaml")
+
+    assert conn.status == 200
+    assert conn.resp_body =~ "openapi: 3.0.0"
+    assert conn.resp_body =~ "Radio Group Call Management API"
+  end
+
   test "invalid request payload returns bad request" do
     conn = request(:post, "/groups/alpha/floor", %{})
 
