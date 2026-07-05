@@ -5,7 +5,9 @@ defmodule RadioCallApi.Application do
 
   @impl true
   def start(_type, _args) do
-    children = []
+    children = [
+      {RadioCallApi.FloorControl.MemoryStore, []}
+    ]
 
     opts = [strategy: :one_for_one, name: RadioCallApi.Supervisor]
     Supervisor.start_link(children, opts)
