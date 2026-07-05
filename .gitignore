@@ -1,0 +1,24 @@
+# compiled artifacts.
+/_build/
+
+# run "mix test --cover", coverage assets end up here.
+/cover/
+
+# dependencies sources.
+/deps/
+
+# ExDoc output generated docs.
+/doc/
+
+# temporary files.
+/tmp/
+
+# VM crashes dump.
+erl_crash.dump
+.DS_Store
+
+# Also ignore archive artifacts.
+*.ez
+
+# package tarball from "mix hex.build".
+radio_call_api-*.tar
