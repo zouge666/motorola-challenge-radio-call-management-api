@@ -34,4 +34,13 @@ defmodule RadioCallApi.FloorControl.ServiceTest do
     assert {403, "User user-2 does not hold the floor for group group-1"} =
              Service.release("group-1", "user-2")
   end
+
+  test "automatically releases the floor after the lease expires" do
+    Service.obtain("group-1", "user-1", 0)
+
+    Process.sleep(250)
+
+    assert {200, "Floor obtained by user-2 for group group-1"} =
+             Service.obtain("group-1", "user-2", 0)
+  end
 end
