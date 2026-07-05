@@ -1,0 +1,120 @@
+openapi: 3.0.0
+info:
+  title: Floor Control API
+  description: API for managing floor ownership in a push-to-talk radio group system.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+paths:
+  /groups/{groupId}/floor:
+    post:
+      summary: Obtain the floor
+      description: Allows a user to obtain the floor for a radio group.
+      operationId: obtainFloor
+      tags:
+        - Floor Control
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: Radio group identifier.
+          schema:
+            type: string
+            example: group-alpha
+      requestBody:
+        required: true
+        description: User requesting the floor.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRequest"
+      responses:
+        "200":
+          description: Floor obtained.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              example:
+                message: Floor obtained by radio-1 for group group-alpha
+        "400":
+          description: Missing or invalid request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: "Invalid request: userId is required"
+        "409":
+          description: Floor is already held by another user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: Floor is currently held by radio-1 for group group-alpha
+  /groups/{groupId}/floor/{userId}:
+    delete:
+      summary: Release the floor
+      description: Allows the current holder to release the floor for a radio group.
+      operationId: releaseFloor
+      tags:
+        - Floor Control
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          description: Radio group identifier.
+          schema:
+            type: string
+            example: group-alpha
+        - name: userId
+          in: path
+          required: true
+          description: User releasing the floor.
+          schema:
+            type: string
+            example: radio-1
+      responses:
+        "200":
+          description: Floor released.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              example:
+                message: Floor released by radio-1 for group group-alpha
+        "403":
+          description: User does not hold the floor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                message: User radio-2 does not hold the floor for group group-alpha
+components:
+  schemas:
+    UserRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          description: User requesting the floor.
+          example: radio-1
+    MessageResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
