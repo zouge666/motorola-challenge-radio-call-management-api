@@ -1,5 +1,28 @@
 # Radio Group Call Management API
 
+## Implemented Scope
+
+**Core Assignment - [ finished ]**
+
+- Obtain, renew, and release floor ownership
+- Dockerized application
+
+**Bonus Scope - [ finished ]**
+
+- Current holder lookup
+- Floor lease timeout
+- Priority-based takeover
+- Recent audit history
+- Local Kind/Kubernetes setup
+- CI quality gate with format, Credo, and tests
+
+**Developer Convenience - [ finished ]**
+
+- Health check endpoint
+- Swagger UI and OpenAPI spec
+- Standalone browser UI
+- Docker Compose local runner
+
 ## Docker
 
 Recommended local run:
@@ -50,7 +73,7 @@ kind delete cluster --name radio-call
 Install dependencies:
 
 ```bash
-mix setup                    equal to -> mix deps.get
+mix deps.get
 ```
 
 Start the API:
@@ -63,6 +86,10 @@ The API runs on: http://localhost:8080
 
 Interactive API docs: http://localhost:8080/docs
 
+API docs preview:
+
+![Swagger UI showing the floor-control API endpoints](docs/images/swagger.png)
+
 ## Local Browser UI
 
 Open it directly:
@@ -72,6 +99,10 @@ cd frontend && open index.html
 ```
 
 Or serve it with `python3 -m http.server 8000 -d frontend`, then visit http://localhost:8000.
+
+Browser UI preview:
+
+![Standalone browser UI for floor-control operations](docs/images/frontend.png)
 
 ## Quality Gate
 
@@ -86,10 +117,19 @@ This runs: `mix format --check-formatted`，`mix credo --strict`，`mix test`
 ## Project Layout
 
 ```text
+.github/workflows/
+  ci.yml                  # GitHub Actions quality gate
 config/
   config.exs              # default app config
   runtime.exs             # production runtime env config
   test.exs                # test-specific config
+docker-compose.yml        # local Docker Compose runner
+dockerfile                # release image build
+frontend/
+  index.html              # standalone local UI
+k8s/
+  api-deployment.yaml     # local Kubernetes deployment
+  api-service.yaml        # local Kubernetes service
 lib/radio_call_api/
   application.ex          # supervision tree
   config.ex               # app config accessors
@@ -105,8 +145,6 @@ lib/radio_call_api/
 priv/static/
   docs.html               # Swagger UI page
   openapi.yaml            # OpenAPI spec
-frontend/
-  index.html              # standalone local UI
 test/
   radio_call_api/         # unit and HTTP integration tests
 ```
