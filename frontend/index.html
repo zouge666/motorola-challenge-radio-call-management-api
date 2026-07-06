@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Radio Call Floor Control</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --panel: #ffffff;
+        --ink: #111111;
+        --muted: #555555;
+        --line: #111111;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        background: #ffffff;
+        color: var(--ink);
+      }
+
+      .shell {
+        min-height: 100%;
+        width: min(1200px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 20px 0 32px;
+      }
+
+      .card {
+        width: 100%;
+        padding: 0;
+        background: transparent;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+        padding: 18px 20px;
+        border: 2px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .status strong {
+        font-size: 1rem;
+      }
+
+      .status small {
+        color: var(--muted);
+        letter-spacing: 0.12em;
+      }
+
+      .subline {
+        margin: 0 0 24px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .field {
+        border: 2px solid var(--line);
+        padding: 14px;
+        background: var(--panel);
+      }
+
+      .field label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--muted);
+      }
+
+      .field-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .prefix {
+        padding: 10px 12px;
+        background: var(--panel);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        font-size: 0.95rem;
+        white-space: nowrap;
+      }
+
+      input {
+        width: 100%;
+        min-width: 0;
+        border: 2px solid var(--ink);
+        background: var(--panel);
+        color: var(--ink);
+        padding: 10px 12px;
+        font: inherit;
+        outline: none;
+      }
+
+      input:focus {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+
+      .command-wrap,
+      .response-wrap {
+        border: 2px solid var(--line);
+        background: var(--panel);
+        padding: 16px;
+        margin-bottom: 18px;
+      }
+
+      .label {
+        margin: 0 0 10px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: var(--muted);
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      .buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      button {
+        appearance: none;
+        border: 2px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        padding: 12px 16px;
+        font: inherit;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        cursor: pointer;
+      }
+
+      .doc-link {
+        border: 2px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        padding: 12px 16px;
+        font: inherit;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+      }
+
+      button:hover,
+      .doc-link:hover {
+        background: #f7f7f7;
+      }
+
+      button.is-active {
+        background: var(--ink);
+        color: var(--panel);
+      }
+
+      .footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .pill {
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100% - 24px, 1200px);
+          padding: 16px 0 24px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .status {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .field-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="card" aria-label="Radio call floor control dashboard">
+        <div class="status">
+          <strong id="stateText">Loading state...</strong>
+          <small id="stateMeta">waiting for api</small>
+        </div>
+
+        <p class="subline">
+          Monochrome control panel for the floor-management API.
+        </p>
+
+        <div class="grid">
+          <div class="field">
+            <label for="groupSuffix">Group suffix</label>
+            <div class="field-row">
+              <span class="prefix">group-</span>
+              <input id="groupSuffix" value="alpha" inputmode="text" spellcheck="false" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="radioSuffix">Radio suffix</label>
+            <div class="field-row">
+              <span class="prefix">radio-</span>
+              <input id="radioSuffix" value="1" inputmode="numeric" spellcheck="false" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="priority">Priority</label>
+            <div class="field-row">
+              <span class="prefix">priority</span>
+              <input id="priority" type="number" value="2" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="auditCount">Audit count</label>
+            <div class="field-row">
+              <span class="prefix">count</span>
+              <input id="auditCount" type="number" value="10" min="1" max="100" />
+            </div>
+          </div>
+        </div>
+
+        <div class="command-wrap">
+          <p class="label">CURL</p>
+          <pre id="commandBlock"></pre>
+        </div>
+
+        <div class="buttons">
+          <button data-action="obtain" class="is-active">Obtain</button>
+          <button data-action="release">Release</button>
+          <button data-action="holder">Holder</button>
+          <button data-action="audit">Audit</button>
+          <button data-action="health">Health</button>
+          <a class="doc-link" href="http://localhost:8080/docs" target="_blank" rel="noreferrer">
+            API Docs
+          </a>
+        </div>
+
+        <div class="response-wrap">
+          <p class="label">Last response</p>
+          <pre id="responseBlock">No request sent yet.</pre>
+        </div>
+
+        <div class="footer">
+          <span class="pill" id="resolvedIds">group-alpha / radio-1</span>
+          <span class="pill">Open this file directly, then point it at http://localhost:8080</span>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const API_BASE = "http://localhost:8080";
+
+      const els = {
+        stateText: document.getElementById("stateText"),
+        stateMeta: document.getElementById("stateMeta"),
+        commandBlock: document.getElementById("commandBlock"),
+        responseBlock: document.getElementById("responseBlock"),
+        resolvedIds: document.getElementById("resolvedIds"),
+        groupSuffix: document.getElementById("groupSuffix"),
+        radioSuffix: document.getElementById("radioSuffix"),
+        priority: document.getElementById("priority"),
+        auditCount: document.getElementById("auditCount"),
+        buttons: Array.from(document.querySelectorAll("button[data-action]"))
+      };
+
+      let activeAction = "obtain";
+
+      function groupId() {
+        return `group-${cleanToken(els.groupSuffix.value, "alpha")}`;
+      }
+
+      function userId() {
+        return `radio-${cleanToken(els.radioSuffix.value, "1")}`;
+      }
+
+      function priorityValue() {
+        const parsed = Number.parseInt(els.priority.value, 10);
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+
+      function auditCountValue() {
+        const parsed = Number.parseInt(els.auditCount.value, 10);
+        if (!Number.isFinite(parsed)) {
+          return 10;
+        }
+        return Math.min(100, Math.max(1, parsed));
+      }
+
+      function cleanToken(value, fallback) {
+        const trimmed = String(value ?? "").trim();
+        return trimmed === "" ? fallback : trimmed;
+      }
+
+      function shellQuote(value) {
+        return "'" + String(value).replaceAll("'", "'\"'\"'") + "'";
+      }
+
+      function floorUrl() {
+        return `${API_BASE}/groups/${encodeURIComponent(groupId())}/floor`;
+      }
+
+      function commandFor(action) {
+        const url = floorUrl();
+
+        switch (action) {
+          case "obtain": {
+            const body = JSON.stringify({
+              userId: userId(),
+              priority: priorityValue()
+            });
+
+            return [
+              `curl -i -X POST "${url}" \\`,
+              `  -H "content-type: application/json" \\`,
+              `  -d ${shellQuote(body)}`
+            ].join("\n");
+          }
+
+          case "release":
+            return `curl -i -X DELETE "${url}/${encodeURIComponent(userId())}"`;
+
+          case "holder":
+            return `curl -i "${url}"`;
+
+          case "audit":
+            return `curl -i "${API_BASE}/audit/floor?count=${auditCountValue()}"`;
+
+          case "health":
+            return `curl -i "${API_BASE}/health"`;
+
+          default:
+            return "";
+        }
+      }
+
+      function setActiveAction(action) {
+        activeAction = action;
+
+        for (const button of els.buttons) {
+          button.classList.toggle("is-active", button.dataset.action === action);
+        }
+
+        els.commandBlock.textContent = commandFor(action);
+      }
+
+      function updateResolvedIds() {
+        els.resolvedIds.textContent = `${groupId()} / ${userId()}`;
+        updateCommandPreview();
+      }
+
+      function updateCommandPreview() {
+        els.commandBlock.textContent = commandFor(activeAction);
+      }
+
+      function setState(message, meta) {
+        els.stateText.textContent = message;
+        els.stateMeta.textContent = meta;
+      }
+
+      async function refreshState() {
+        const url = floorUrl();
+
+        try {
+          const response = await fetch(url, { headers: { accept: "application/json" } });
+
+          if (response.status === 204) {
+            setState(`No one is holding ${groupId()}`, "state: empty");
+            return;
+          }
+
+          const data = await response.json();
+          setState(
+            `${data.userId} is holding ${groupId()}`,
+            `priority: ${data.priority}`
+          );
+        } catch (error) {
+          setState("API unavailable", String(error.message || error));
+        }
+      }
+
+      async function callApi(action) {
+        setActiveAction(action);
+        updateResolvedIds();
+
+        const request = {
+          obtain: () =>
+            fetch(floorUrl(), {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                userId: userId(),
+                priority: priorityValue()
+              })
+            }),
+          release: () =>
+            fetch(`${floorUrl()}/${encodeURIComponent(userId())}`, {
+              method: "DELETE"
+            }),
+          holder: () => fetch(floorUrl(), { headers: { accept: "application/json" } }),
+          audit: () =>
+            fetch(`${API_BASE}/audit/floor?count=${auditCountValue()}`, {
+              headers: { accept: "application/json" }
+            }),
+          health: () => fetch(`${API_BASE}/health`, { headers: { accept: "application/json" } })
+        }[action];
+
+        try {
+          const response = await request();
+          const text = await response.text();
+
+          let pretty = text;
+          try {
+            pretty = text ? JSON.stringify(JSON.parse(text), null, 2) : "";
+          } catch (parseError) {
+            pretty = text;
+          }
+
+          els.responseBlock.textContent = [
+            `HTTP ${response.status}`,
+            response.status === 204 ? "<empty body>" : pretty || "<empty body>"
+          ].join("\n\n");
+
+          if (action === "holder") {
+            if (response.status === 204) {
+              setState(`No one is holding ${groupId()}`, "state: empty");
+            } else {
+              const data = text ? JSON.parse(text) : {};
+              setState(
+                `${data.userId} is holding ${groupId()}`,
+                `priority: ${data.priority}`
+              );
+            }
+          } else if (action === "audit") {
+            setState(`Audit loaded for ${groupId()}`, `count: ${auditCountValue()}`);
+          } else if (action === "health") {
+            setState("API healthy", `endpoint: /health`);
+          } else {
+            await refreshState();
+          }
+        } catch (error) {
+          els.responseBlock.textContent = `Request failed: ${error.message || error}`;
+          setState("Request failed", String(error.message || error));
+        }
+      }
+
+      for (const button of els.buttons) {
+        button.addEventListener("click", () => {
+          callApi(button.dataset.action);
+        });
+      }
+
+      for (const input of [els.groupSuffix, els.radioSuffix, els.priority, els.auditCount]) {
+        input.addEventListener("input", () => {
+          updateResolvedIds();
+          if (input === els.groupSuffix) {
+            refreshState();
+          }
+        });
+      }
+
+      updateResolvedIds();
+      setActiveAction("obtain");
+      refreshState();
+    </script>
+  </body>
+</html>
