@@ -2,29 +2,50 @@
 
 ## Docker
 
-Run it locally:
-
-```bash
-docker run --rm -p 8080:8080 radio_call_api:local
-```
-
-The container exposes the same API at http://localhost:8080
-
-Or use Docker Compose:
+Recommended local run:
 
 ```bash
 docker compose up --build
 ```
 
+The container exposes the same API at http://localhost:8080
+
 Stop it with `docker compose down`.
 
-Build the release image:
+Or build and run manually:
 
 ```bash
 docker build -f dockerfile -t radio_call_api:local .
+docker run --rm -p 8080:8080 radio_call_api:local
 ```
 
-## Run Locally
+## Kubernetes
+
+First-time local run with Kind:
+
+```bash
+kind create cluster --name radio-call
+docker build -f dockerfile -t radio_call_api:local .
+kind load docker-image radio_call_api:local --name radio-call
+kubectl apply -f k8s/
+kubectl rollout status deployment/radio-call-api --timeout=90s
+kubectl port-forward svc/radio-call-api 8080:8080
+```
+
+Second run, if the cluster is still there:
+
+```bash
+kubectl port-forward svc/radio-call-api 8080:8080
+```
+
+Clean up:
+
+```bash
+kubectl delete -f k8s/
+kind delete cluster --name radio-call
+```
+
+## Source Run
 
 Install dependencies:
 
