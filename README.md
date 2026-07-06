@@ -10,6 +10,14 @@ docker run --rm -p 8080:8080 radio_call_api:local
 
 The container exposes the same API at http://localhost:8080
 
+Or use Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Stop it with `docker compose down`.
+
 Build the release image:
 
 ```bash
