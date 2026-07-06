@@ -73,7 +73,7 @@ kind delete cluster --name radio-call
 Install dependencies:
 
 ```bash
-mix deps.get
+mix setup                equal to -> mix deps.get
 ```
 
 Start the API:
@@ -125,6 +125,7 @@ config/
   test.exs                # test-specific config
 docker-compose.yml        # local Docker Compose runner
 dockerfile                # release image build
+docs/images/              # README screenshots
 frontend/
   index.html              # standalone local UI
 k8s/
